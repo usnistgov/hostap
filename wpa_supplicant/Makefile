@@ -1,6 +1,7 @@
 ifndef CC
-CC=gcc
+CC=ncc -ncgcc -ncld -ncspp -ncfabs
 endif
+#CC=ncc -ncgcc -ncld -ncspp -ncfabs
 
 ifndef CFLAGS
 CFLAGS = -MMD -O2 -Wall -g

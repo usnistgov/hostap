@@ -74,6 +74,7 @@ static void gas_server_free_response(struct gas_server_response *response)
 {
 	if (!response)
 		return;
+        /* mranga -- this frees the gas server response - but why only called from configurator?*/
 	wpa_printf(MSG_DEBUG, "DPP: Free GAS response @%p", response);
 	eloop_cancel_timeout(gas_server_response_timeout, response, NULL);
 	wpabuf_free(response->resp);
@@ -218,7 +219,7 @@ gas_server_rx_initial_req(struct gas_server *gas, const u8 *da, const u8 *sa,
 			continue;
 
 		wpa_printf(MSG_DEBUG,
-			   "GAS: Calling handler for the requested Advertisement Protocol ID");
+			   "GAS: Calling handler for the requested Advertisement Protocol ID '%d'", adv_proto + 1);
 		resp = handler->req_cb(handler->ctx, sa, query_req,
 				       query_req_len);
 		wpa_hexdump_buf(MSG_MSGDUMP, "GAS: Response from the handler",

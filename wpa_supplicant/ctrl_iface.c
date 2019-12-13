@@ -10762,6 +10762,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_DPP2 */
 #endif /* CONFIG_DPP */
 	} else {
+		wpa_printf(MSG_DEBUG,"command = '%s'",buf);
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;
 	}

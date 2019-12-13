@@ -491,6 +491,9 @@ int wpa_ctrl_request(struct wpa_ctrl *ctrl, const char *cmd, size_t cmd_len,
 	char *cmd_buf = NULL;
 	size_t _cmd_len;
 
+        wpa_printf(MSG_DEBUG, "wpa_ctrl_request command = '%s'",cmd);
+
+    /* mranga -- this is where the cli command reads from the socket **/
 #ifdef CONFIG_CTRL_IFACE_UDP
 	if (ctrl->cookie) {
 		char *pos;

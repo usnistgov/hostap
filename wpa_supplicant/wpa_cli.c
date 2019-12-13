@@ -3016,7 +3016,11 @@ static int wpa_cli_cmd_dpp_pkex_remove(struct wpa_ctrl *ctrl, int argc,
 {
 	return wpa_cli_cmd(ctrl, "DPP_PKEX_REMOVE", 1, argc, argv);
 }
-
+static int wpa_cli_cmd_dpp_controller_start(struct wpa_ctrl *ctrl, int argc,
+				       char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "DPP_CONTROLLER_START", 1, argc, argv);
+}
 #endif /* CONFIG_DPP */
 
 
@@ -3678,6 +3682,11 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "dpp_pkex_remove", wpa_cli_cmd_dpp_pkex_remove, NULL,
 	  cli_cmd_flag_none,
 	  "*|<id> = remove DPP pkex information" },
+/* mranga -- add new commands here dpp_controller_start */
+	{ "dpp_controller_start", wpa_cli_cmd_dpp_controller_start, NULL, 
+           cli_cmd_flag_none,
+           "tcp_port=<port> = start the controller "},
+        
 #endif /* CONFIG_DPP */
 	{ NULL, NULL, NULL, cli_cmd_flag_none, NULL }
 };

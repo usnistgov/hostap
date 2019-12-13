@@ -2570,9 +2570,27 @@ struct wpabuf * dpp_build_conf_req_helper(struct dpp_authentication *auth,
 	len = 100 + os_strlen(nbuf) + int_array_len(opclasses) * 4;
 	if (mud_url && mud_url[0])
 		len += 10 + os_strlen(mud_url);
+    /* mranga -- piggy back some additional stuff */
+    FILE *f = fopen("/home/mranga/DevID50/DevIDCredentials/IDevID50.cert.pem", "rb");
+    /* mranga -- bugbug - malloc the length of the file. This is a quick hack */
+    char *pemfile = os_malloc(2048);
+    bzero(pemfile,2048);
+    if (f) {
+     while (fgets(pemfile + strlen(pemfile), 1024, f)!=NULL);
+     fclose(f);
+    }
+
+    /* mranga compute the length of the extra stuff we plan to add
+       bugbug -- should be pemfile length + 11 */
+    char* extra_stuff = os_malloc(2048);
+    sprintf(extra_stuff,"\"iDevId\":\"%s\"",pemfile);
+    len += os_strlen(extra_stuff);
+	wpa_printf(MSG_DEBUG, "DPP:  %s",extra_stuff);
+    os_free(extra_stuff);
 	json = wpabuf_alloc(len);
 	if (!json) {
 		os_free(nbuf);
+        os_free(pemfile);
 		return NULL;
 	}
 
@@ -2583,6 +2601,10 @@ struct wpabuf * dpp_build_conf_req_helper(struct dpp_authentication *auth,
 		      nbuf, tech, netrole_ap ? "ap" : "sta");
 	if (mud_url && mud_url[0])
 		wpabuf_printf(json, ",\"mudurl\":\"%s\"", mud_url);
+	/* mranga piggy back additional stuff on the config request */
+    wpabuf_printf(json,",\"iDevId\":\"%s\"",pemfile);      
+    os_free(pemfile);
+
 	if (opclasses) {
 		int i;
 
@@ -5294,8 +5316,13 @@ dpp_conf_req_rx(struct dpp_authentication *auth, const u8 *attr_start,
 	}
 
 	token = json_get_member(root, "mudurl");
-	if (token && token->type == JSON_STRING)
+	if (token && token->type == JSON_STRING) {
+		wpa_printf(MSG_DEBUG, "DPP: Verify the signature here using mudurl = '%s'", token->string);
 		wpa_printf(MSG_DEBUG, "DPP: mudurl = '%s'", token->string);
+		wpa_hexdump(MSG_DEBUG,"DPP: auth->peer_bi->pubkey_hash ", auth->peer_bi->pubkey_hash,SHA256_MAC_LEN);
+		/* Why not send the whole idevid cert as part of the config request ?*/
+        /*mranga write to the unix domain socket to send the message out to wpa_supplicant */
+        }
 
 	token = json_get_member(root, "bandSupport");
 	if (token && token->type == JSON_ARRAY) {
@@ -9488,6 +9515,8 @@ static void dpp_controller_start_gas_client(struct dpp_connection *conn)
 			   "DPP: No configuration request data available");
 		return;
 	}
+	
+	wpa_printf(MSG_DEBUG, "DPP: dpp_controller_start_gas_client");
 
 	wpabuf_free(conn->msg_out);
 	conn->msg_out_pos = 0;
@@ -9545,7 +9574,7 @@ static void dpp_conn_tx_ready(int sock, void *eloop_ctx, void *sock_ctx)
 {
 	struct dpp_connection *conn = eloop_ctx;
 
-	wpa_printf(MSG_DEBUG, "DPP: TCP socket %d ready for TX", sock);
+	wpa_printf(MSG_DEBUG, "DPP: dpp_conn_tx_ready: TCP socket %d ready for TX", sock);
 	dpp_tcp_send(conn);
 }
 
@@ -9817,7 +9846,7 @@ static int dpp_controller_rx_auth_req(struct dpp_connection *conn,
 	if (!conn->ctrl)
 		return 0;
 
-	wpa_printf(MSG_DEBUG, "DPP: Authentication Request");
+	wpa_printf(MSG_DEBUG, "DPP: Authentication Request dpp_controller_rx_auth_req");
 
 	r_bootstrap = dpp_get_attr(buf, len, DPP_ATTR_R_BOOTSTRAP_KEY_HASH,
 				   &r_bootstrap_len);
@@ -9903,7 +9932,7 @@ static int dpp_controller_rx_auth_resp(struct dpp_connection *conn,
 	if (!auth)
 		return -1;
 
-	wpa_printf(MSG_DEBUG, "DPP: Authentication Response");
+	wpa_printf(MSG_DEBUG, "DPP: Authentication Response: dpp_controller_rx_auth_resp");
 
 	msg = dpp_auth_resp_rx(auth, hdr, buf, len);
 	if (!msg) {

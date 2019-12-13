@@ -720,6 +720,8 @@ static void gas_query_tx_initial_req(struct gas_query *gas,
 
 	wpa_printf(MSG_DEBUG, "GAS: Starting query timeout for dialog token %u",
 		   query->dialog_token);
+        /* mranga -- this is the timeout period registration. Should cancel timeout and re-register 
+        if other end sends a wait. */
 	eloop_register_timeout(GAS_QUERY_TIMEOUT_PERIOD, 0,
 			       gas_query_timeout, gas, query);
 }
@@ -848,6 +850,7 @@ int gas_query_req(struct gas_query *gas, const u8 *dst, int freq,
 		" dialog_token=%u freq=%d",
 		MAC2STR(query->addr), query->dialog_token, query->freq);
 
+	/* mranga -- register a callback that gets called when radio channel is avail */
 	if (radio_add_work(gas->wpa_s, freq, "gas-query", 0, gas_query_start_cb,
 			   query) < 0) {
 		query->req = NULL; /* caller will free this in error case */

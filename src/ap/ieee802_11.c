@@ -3297,14 +3297,15 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 			sta->dpp_pfs = dpp_pfs_init(
 				wpabuf_head(hapd->conf->dpp_netaccesskey),
 				wpabuf_len(hapd->conf->dpp_netaccesskey));
+            int failed = 0;
 			if (!sta->dpp_pfs) {
 				wpa_printf(MSG_DEBUG,
 					   "DPP: Could not initialize PFS");
 				/* Try to continue without PFS */
-				goto pfs_fail;
+                failed = 1;
 			}
 
-			if (dpp_pfs_process(sta->dpp_pfs, elems.owe_dh,
+			if ((! failed) && dpp_pfs_process(sta->dpp_pfs, elems.owe_dh,
 					    elems.owe_dh_len) < 0) {
 				dpp_pfs_free(sta->dpp_pfs);
 				sta->dpp_pfs = NULL;
@@ -3314,7 +3315,6 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 
 		wpa_auth_set_dpp_z(sta->wpa_sm, sta->dpp_pfs ?
 				   sta->dpp_pfs->secret : NULL);
-	pfs_fail:
 #endif /* CONFIG_DPP2 */
 
 #ifdef CONFIG_IEEE80211N

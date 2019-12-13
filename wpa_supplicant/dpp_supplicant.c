@@ -595,6 +595,7 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 
 	wpa_s->dpp_gas_client = 0;
 
+	wpa_printf(MSG_INFO, "DPP: wpas_dpp_auth_init");
 	pos = os_strstr(cmd, " peer=");
 	if (!pos)
 		return -1;
@@ -1188,6 +1189,8 @@ static void wpas_dpp_gas_resp_cb(void *ctx, const u8 *addr, u8 dialog_token,
 		goto fail;
 	}
 
+	/* mranga -- here is where the enrollee gets the configuration */
+
 	wpa_hexdump_buf(MSG_DEBUG, "DPP: Configuration Response adv_proto",
 			adv_proto);
 	wpa_hexdump_buf(MSG_DEBUG, "DPP: Configuration Response (GAS response)",
@@ -1284,6 +1287,7 @@ static void wpas_dpp_start_gas_client(struct wpa_supplicant *wpa_s)
 			   "DPP: No configuration request data available");
 		return;
 	}
+        /* mranga - here is where the config request gets sent out*/
 
 	wpa_printf(MSG_DEBUG, "DPP: GAS request to " MACSTR " (freq %u MHz)",
 		   MAC2STR(auth->peer_mac_addr), auth->curr_freq);
@@ -1453,6 +1457,7 @@ static void wpas_dpp_rx_conf_result(struct wpa_supplicant *wpa_s, const u8 *src,
 	struct dpp_authentication *auth = wpa_s->dpp_auth;
 	enum dpp_status_error status;
 
+        /* mranga -- this is called from the configurator -- completes the 3-way handshake.*/
 	wpa_printf(MSG_DEBUG, "DPP: Configuration Result from " MACSTR,
 		   MAC2STR(src));
 
@@ -2124,6 +2129,7 @@ wpas_dpp_gas_req_handler(void *ctx, const u8 *sa, const u8 *query,
 	struct dpp_authentication *auth = wpa_s->dpp_auth;
 	struct wpabuf *resp;
 
+	/* mranga -- GAS request contains the DPP config object - could use this mechanism for other things*/
 	wpa_printf(MSG_DEBUG, "DPP: GAS request from " MACSTR,
 		   MAC2STR(sa));
 	if (!auth || !auth->auth_success ||
@@ -2148,6 +2154,7 @@ wpas_dpp_gas_req_handler(void *ctx, const u8 *sa, const u8 *query,
 		    query, query_len);
 	wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_CONF_REQ_RX "src=" MACSTR,
 		MAC2STR(sa));
+        /* Process the conf request */
 	resp = dpp_conf_req_rx(auth, query, query_len);
 	if (!resp)
 		wpa_msg(wpa_s, MSG_INFO, DPP_EVENT_CONF_FAILED);
@@ -2457,6 +2464,7 @@ int wpas_dpp_pkex_add(struct wpa_supplicant *wpa_s, const char *cmd)
 }
 
 
+
 int wpas_dpp_pkex_remove(struct wpa_supplicant *wpa_s, const char *id)
 {
 	unsigned int id_val;
@@ -2508,6 +2516,12 @@ int wpas_dpp_init(struct wpa_supplicant *wpa_s)
 	WPA_PUT_BE24(&adv_proto_id[2], OUI_WFA);
 	adv_proto_id[5] = DPP_OUI_TYPE;
 	adv_proto_id[6] = 0x01;
+
+	
+	/* mranga Registration for GAS callbacks for DPP. 
+           Need to install a callback for provisional response.*/
+
+        wpa_printf(MSG_DEBUG, "DPP: wpas_init_dpp");
 
 	if (gas_server_register(wpa_s->gas_server, adv_proto_id,
 				sizeof(adv_proto_id), wpas_dpp_gas_req_handler,
@@ -2564,6 +2578,8 @@ void wpas_dpp_deinit(struct wpa_supplicant *wpa_s)
 #ifdef CONFIG_DPP2
 int wpas_dpp_controller_start(struct wpa_supplicant *wpa_s, const char *cmd)
 {
+
+	wpa_printf(MSG_DEBUG, "WPAS_DPP_CONTROLLER_START '%s'",cmd);
 	struct dpp_controller_config config;
 	const char *pos;
 
