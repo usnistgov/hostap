@@ -5325,7 +5325,14 @@ dpp_conf_req_rx(struct dpp_authentication *auth, const u8 *attr_start,
     token = json_get_member(root,"iDevId");
     /* get the idevid */
     if(token && token->type == JSON_STRING) {
-       /* mranga - todo verify that the compressed hash of the public key matches the bootstrapping key*/
+       /* Get the peer bootstrap URI */
+       struct  dpp_bootstrap_info* peer_bi =   auth->peer_bi;
+       char* bootstrap_uri = peer_bi->uri;
+       char* uri_token = strtok(bootstrap_uri,";");
+       uri_token = strtok(NULL, ";");
+       char* public_key = uri_token + strlen("K:");
+       wpa_printf( MSG_DEBUG, "DPP: compressed public key =  %s\n", public_key ); 
+       /* mranga - TODO verify that the compressed hash of the public key matches the bootstrapping key*/
        wpa_printf(MSG_DEBUG,"DPP cert : %s",token->string);
        /* mranga -- TODO put this in the config file. verify the certificate chain that was passed back */
        char* trustedCertsPath = "/home/mranga/DevID50/CredentialChain/ca-chain.cert.pem";
