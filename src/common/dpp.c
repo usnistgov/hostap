@@ -2571,7 +2571,7 @@ struct wpabuf * dpp_build_conf_req_helper(struct dpp_authentication *auth,
 	len = 100 + os_strlen(nbuf) + int_array_len(opclasses) * 4;
 	if (mud_url && mud_url[0])
 		len += 10 + os_strlen(mud_url);
-    /* mranga -- piggy back some additional stuff */
+    /* mranga -- piggy back some additional stuff. TODO - put this in config */
     FILE *f = fopen("/home/mranga/DevID50/DevIDCredentials/IDevID50.cert.pem", "rb");
     /* mranga -- bugbug - malloc the length of the file. This is a quick hack */
     char *pemfile = os_malloc(2048);
@@ -5331,10 +5331,9 @@ dpp_conf_req_rx(struct dpp_authentication *auth, const u8 *attr_start,
        char* uri_token = strtok(bootstrap_uri,";");
        uri_token = strtok(NULL, ";");
        char* public_key = uri_token + strlen("K:");
-       wpa_printf( MSG_DEBUG, "DPP: compressed public key =  %s\n", public_key ); 
-       /* mranga - TODO verify that the compressed hash of the public key matches the bootstrapping key*/
+       wpa_printf( MSG_DEBUG, "DPP: bootstrapping key =  %s\n", public_key ); 
        wpa_printf(MSG_DEBUG,"DPP cert : %s",token->string);
-       /* mranga -- TODO put this in the config file. verify the certificate chain that was passed back */
+       /* mranga -- TODO put this in the config file. */
        char* trustedCertsPath = "/home/mranga/DevID50/CredentialChain/ca-chain.cert.pem";
        X509_STORE *store = X509_STORE_new();
        X509_LOOKUP *lookup = X509_STORE_add_lookup(store, X509_LOOKUP_file());
@@ -5350,14 +5349,43 @@ dpp_conf_req_rx(struct dpp_authentication *auth, const u8 *attr_start,
 		  dpp_auth_fail(auth, "ERROR reading certificate");
           goto fail;
        }
-       X509_NAME* certsubject = X509_get_subject_name(cert);
-       if (certsubject == NULL) {
-		  wpa_printf(MSG_ERROR, "DPP: Test -- could not read cert subject");
-		  dpp_auth_fail(auth, "ERROR reading certificate");
+       /* Extract the public key from the cert */
+       EVP_PKEY *pkey = X509_get_pubkey(cert);
+       if (pkey == NULL) {
+		  wpa_printf(MSG_ERROR, "DPP:  could not get the public key from certificate");
+		  dpp_auth_fail(auth, "ERROR cannot get the public key");
           goto fail;
        }
 
+       /* Get the bootstrap key */
+       struct wpabuf * bootstrap_key = dpp_bootstrap_key_der(pkey);
+       size_t base64len;
+	   unsigned char* base64 = base64_encode(bootstrap_key->buf, bootstrap_key->size, &base64len);
+       unsigned char* base64_stripped = (unsigned char*) os_malloc((size_t)strlen((const char*)base64));
+       memset(base64_stripped,'\0',strlen((const char*)base64));
+       /* strip the new line characters*/
+       for (int i = 0, j=0; i < strlen((const char*)base64); i++) {
+            if (base64[i] != '\n') {
+                base64_stripped[j++] = base64[i];
+            } 
+       }
+	   os_free(base64);
+ 
+       wpa_printf(MSG_DEBUG, "DPP:  base64 pubkey %s", base64_stripped);
+
+       /* compare the public key in the cert with the bootstrap key */
+       if (strcmp((const char*)base64_stripped,(const char*)public_key) != 0 ) {
+		  wpa_printf(MSG_ERROR, "DPP:  public key does not match bootstrap key");
+		  dpp_auth_fail(auth, "ERROR public key mismatch");
+          os_free(base64_stripped);
+          wpabuf_free(bootstrap_key);
+          goto fail;
+       }
+	   os_free(base64_stripped);
+       wpabuf_free(bootstrap_key);
        BIO_free(cbio);
+
+       /* verify the certificate */
        X509_STORE_CTX *ctx = X509_STORE_CTX_new();
        X509_STORE_CTX_init(ctx, store, cert, NULL);
        int status = status = X509_verify_cert(ctx);
