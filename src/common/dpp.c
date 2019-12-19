@@ -2573,33 +2573,30 @@ struct wpabuf * dpp_build_conf_req_helper(struct dpp_authentication *auth,
 	if (mud_url && mud_url[0])
 		len += 10 + os_strlen(mud_url);
 
-   	/* mranga -- open the idevid file */
+   	/* mranga -- open the idevid file. Read contents into pemfile */
 	if (idevid)  {
-		FILE *f = fopen(idevid, "rb");
+		FILE *f = fopen(idevid, "r");
 		if (f) {
 		    fseek(f, 0L, SEEK_END);
 		    int sz = ftell(f);
 		    rewind(f);
-			/* mranga -- bugbug - malloc the length of the file. This is a quick hack */    	
-			pemfile = os_malloc(2048);
-    		bzero(pemfile,2048);
-     		while (fgets(pemfile + strlen(pemfile), 1024, f)!=NULL);
+            int size =  sz+1;
+			pemfile = os_malloc(size);
+    		bzero(pemfile,size);
+            while (fgets(pemfile + strlen(pemfile), 1024, f)!=NULL);
      		fclose(f);
-    		/* mranga compute the length of the extra stuff we plan to add
-        	bugbug -- should be pemfile length + 11 */
-    		char* extra_stuff = os_malloc(2048);
-    		sprintf(extra_stuff,"\"iDevId\":\"%s\"",pemfile);
-    		len += os_strlen(extra_stuff);
-            wpa_printf(MSG_DEBUG, "DPP:  %s",extra_stuff);
-    		os_free(extra_stuff);
-
+            wpa_printf(MSG_DEBUG,"DPP pemfile: %s", pemfile);
+            len += strlen(pemfile) + strlen("\"iDevId\":");
 		}
 	}
+
 
 	json = wpabuf_alloc(len);
 	if (!json) {
 		os_free(nbuf);
-   		os_free(pemfile);
+        if (pemfile) {
+   		   os_free(pemfile);
+        }
 		return NULL;
 	}
 
@@ -2610,7 +2607,7 @@ struct wpabuf * dpp_build_conf_req_helper(struct dpp_authentication *auth,
 		      nbuf, tech, netrole_ap ? "ap" : "sta");
 	if (mud_url && mud_url[0])
 		wpabuf_printf(json, ",\"mudurl\":\"%s\"", mud_url);
-	/* mranga -- add the idevid to the request */
+	/* Add the idevid to the config request */
     if (pemfile && pemfile[0] ) {
    		wpabuf_printf(json,",\"iDevId\":\"%s\"",pemfile);      
    		os_free(pemfile);
