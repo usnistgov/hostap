@@ -265,6 +265,8 @@ struct dpp_authentication {
 	char *groups_override;
 	unsigned int ignore_netaccesskey_mismatch:1;
 #endif /* CONFIG_TESTING_OPTIONS */
+	/* added - mranga */
+	char *cacert;
 };
 
 struct dpp_configurator {
@@ -420,6 +422,7 @@ struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 					  struct dpp_bootstrap_info *peer_bi,
 					  struct dpp_bootstrap_info *own_bi,
 					  u8 dpp_allowed_roles,
+                      char* cacert, /* added mranga */
 					  unsigned int neg_freq,
 					  struct hostapd_hw_modes *own_modes,
 					  u16 num_modes);

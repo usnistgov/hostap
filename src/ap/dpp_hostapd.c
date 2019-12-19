@@ -397,6 +397,7 @@ static int hostapd_dpp_auth_init_next(struct hostapd_data *hapd)
 int hostapd_dpp_auth_init(struct hostapd_data *hapd, const char *cmd)
 {
 	const char *pos;
+    char* cacert = NULL;
 	struct dpp_bootstrap_info *peer_bi, *own_bi = NULL;
 	u8 allowed_roles = DPP_CAPAB_CONFIGURATOR;
 	unsigned int neg_freq = 0;
@@ -459,8 +460,13 @@ int hostapd_dpp_auth_init(struct hostapd_data *hapd, const char *cmd)
 		dpp_auth_deinit(hapd->dpp_auth);
 	}
 
+	/* mranga -- added */
+	pos = os_strstr(cmd, " cacert=");
+	if (pos)
+		cacert = get_param(cmd, " cacert=");
+
 	hapd->dpp_auth = dpp_auth_init(hapd->msg_ctx, peer_bi, own_bi,
-				       allowed_roles, neg_freq,
+				       allowed_roles, cacert, neg_freq,
 				       hapd->iface->hw_features,
 				       hapd->iface->num_hw_features);
 	if (!hapd->dpp_auth)

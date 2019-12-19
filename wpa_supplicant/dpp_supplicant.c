@@ -592,6 +592,7 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 	struct hostapd_ip_addr ipaddr;
 	char *addr;
 #endif /* CONFIG_DPP2 */
+    char *cacert = NULL;
 
 	wpa_s->dpp_gas_client = 0;
 
@@ -678,7 +679,12 @@ int wpas_dpp_auth_init(struct wpa_supplicant *wpa_s, const char *cmd)
 		wpa_s->dpp_auth = NULL;
 	}
 
-	auth = dpp_auth_init(wpa_s, peer_bi, own_bi, allowed_roles, neg_freq,
+	/* mranga -- get the cacert give it to dpp_auth_init */
+	pos = os_strstr(cmd, " cacert=");
+        if (pos)
+		cacert = get_param(cmd, " cacert=");
+
+	auth = dpp_auth_init(wpa_s, peer_bi, own_bi, allowed_roles, cacert, neg_freq,
 			     wpa_s->hw.modes, wpa_s->hw.num_modes);
 	if (!auth)
 		goto fail;

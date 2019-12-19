@@ -2250,6 +2250,7 @@ struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 					  struct dpp_bootstrap_info *peer_bi,
 					  struct dpp_bootstrap_info *own_bi,
 					  u8 dpp_allowed_roles,
+					  char* cacert,
 					  unsigned int neg_freq,
 					  struct hostapd_hw_modes *own_modes,
 					  u16 num_modes)
@@ -2274,6 +2275,7 @@ struct dpp_authentication * dpp_auth_init(void *msg_ctx,
 	auth->peer_bi = peer_bi;
 	auth->own_bi = own_bi;
 	auth->curve = peer_bi->curve;
+	auth->cacert = cacert;
 
 	if (dpp_autogen_bootstrap_key(auth) < 0 ||
 	    dpp_prepare_channel_list(auth, own_modes, num_modes) < 0)
@@ -2577,16 +2579,16 @@ struct wpabuf * dpp_build_conf_req_helper(struct dpp_authentication *auth,
 	if (idevid)  {
 		FILE *f = fopen(idevid, "r");
 		if (f) {
-		    fseek(f, 0L, SEEK_END);
-		    int sz = ftell(f);
-		    rewind(f);
-            int size =  sz+1;
+		    	fseek(f, 0L, SEEK_END);
+		    	int sz = ftell(f);
+		    	rewind(f);
+			int size =  sz+1;
 			pemfile = os_malloc(size);
-    		bzero(pemfile,size);
-            while (fgets(pemfile + strlen(pemfile), 1024, f)!=NULL);
-     		fclose(f);
-            wpa_printf(MSG_DEBUG,"DPP pemfile: %s", pemfile);
-            len += strlen(pemfile) + strlen("\"iDevId\":");
+ 			bzero(pemfile,size);
+			while (fgets(pemfile + strlen(pemfile), 1024, f)!=NULL);
+			fclose(f);
+			wpa_printf(MSG_DEBUG,"DPP pemfile: %s", pemfile);
+			len += strlen(pemfile) + strlen("\"iDevId\":");
 		}
 	}
 
@@ -2608,7 +2610,7 @@ struct wpabuf * dpp_build_conf_req_helper(struct dpp_authentication *auth,
 	if (mud_url && mud_url[0])
 		wpabuf_printf(json, ",\"mudurl\":\"%s\"", mud_url);
 	/* Add the idevid to the config request */
-    if (pemfile && pemfile[0] ) {
+	if (pemfile && pemfile[0] ) {
    		wpabuf_printf(json,",\"iDevId\":\"%s\"",pemfile);      
    		os_free(pemfile);
 	}
@@ -5327,87 +5329,91 @@ dpp_conf_req_rx(struct dpp_authentication *auth, const u8 *attr_start,
 	if (token && token->type == JSON_STRING) {
 		wpa_printf(MSG_DEBUG, "DPP: mudurl = '%s'", token->string);
 		wpa_hexdump(MSG_DEBUG,"DPP: auth->peer_bi->pubkey_hash ", auth->peer_bi->pubkey_hash,SHA256_MAC_LEN);
-    }
+	}
 	
-    token = json_get_member(root,"iDevId");
-    /* get the idevid */
-    if(token && token->type == JSON_STRING) {
-       /* Get the peer bootstrap URI */
-       struct  dpp_bootstrap_info* peer_bi =   auth->peer_bi;
-       char* bootstrap_uri = peer_bi->uri;
-       char* uri_token = strtok(bootstrap_uri,";");
-       uri_token = strtok(NULL, ";");
-       char* public_key = uri_token + strlen("K:");
-       wpa_printf( MSG_DEBUG, "DPP: bootstrapping key =  %s\n", public_key ); 
-       wpa_printf(MSG_DEBUG,"DPP cert : %s",token->string);
-       /* mranga -- TODO put this in the config file. */
-       char* trustedCertsPath = "/home/mranga/DevID50/CredentialChain/ca-chain.cert.pem";
-       X509_STORE *store = X509_STORE_new();
-       X509_LOOKUP *lookup = X509_STORE_add_lookup(store, X509_LOOKUP_file());
-       if(X509_load_cert_file(lookup, trustedCertsPath, X509_FILETYPE_PEM) == 0 ) {
-		  wpa_printf(MSG_ERROR, "DPP:Error loading cert chain");
-		  dpp_auth_fail(auth, "ERROR loading cert chain");
-          goto fail;
-       }
-       BIO* cbio = BIO_new_mem_buf((void*)token->string, -1);
-       X509* cert = PEM_read_bio_X509(cbio, NULL, 0, NULL);
-       if (cert == NULL) {
-		  wpa_printf(MSG_ERROR, "DPP:Error reading certificate");
-		  dpp_auth_fail(auth, "ERROR reading certificate");
-          goto fail;
-       }
-       /* Extract the public key from the cert */
-       EVP_PKEY *pkey = X509_get_pubkey(cert);
-       if (pkey == NULL) {
-		  wpa_printf(MSG_ERROR, "DPP:  could not get the public key from certificate");
-		  dpp_auth_fail(auth, "ERROR cannot get the public key");
-          goto fail;
-       }
-
-       /* Get the bootstrap key */
-       struct wpabuf * bootstrap_key = dpp_bootstrap_key_der(pkey);
-       size_t base64len;
-	   unsigned char* base64 = base64_encode(bootstrap_key->buf, bootstrap_key->size, &base64len);
-       unsigned char* base64_stripped = (unsigned char*) os_malloc((size_t)strlen((const char*)base64));
-       memset(base64_stripped,'\0',strlen((const char*)base64));
-       /* strip the new line characters*/
-       for (int i = 0, j=0; i < strlen((const char*)base64); i++) {
-            if (base64[i] != '\n') {
-                base64_stripped[j++] = base64[i];
-            } 
-       }
-	   os_free(base64);
- 
-       wpa_printf(MSG_DEBUG, "DPP:  base64 pubkey %s", base64_stripped);
-
-       /* compare the public key in the cert with the bootstrap key */
-       if (strcmp((const char*)base64_stripped,(const char*)public_key) != 0 ) {
-		  wpa_printf(MSG_ERROR, "DPP:  public key does not match bootstrap key");
-		  dpp_auth_fail(auth, "ERROR public key mismatch");
-          os_free(base64_stripped);
-          wpabuf_free(bootstrap_key);
-          goto fail;
-       }
-	   os_free(base64_stripped);
-       wpabuf_free(bootstrap_key);
-       BIO_free(cbio);
-
-       /* verify the certificate */
-       X509_STORE_CTX *ctx = X509_STORE_CTX_new();
-       X509_STORE_CTX_init(ctx, store, cert, NULL);
-       int status = status = X509_verify_cert(ctx);
-       X509_STORE_CTX_free(ctx);
-       X509_STORE_free(store);
-       X509_free(cert);
-       if(status == 1) {
-           wpa_printf(MSG_DEBUG, "DPP: Certificate verified ok\n");
-       } else {
-		  wpa_printf(MSG_ERROR, "DPP:Error verifying cert");
-		  dpp_auth_fail(auth, "Cert verification failed.");
-          goto fail;
-       }
+    	token = json_get_member(root,"iDevId");
+    	/* mranga -- get the idevid and verify it */
+	if(token && token->type == JSON_STRING) {
+       		/* Get the peer bootstrap URI */
+		struct  dpp_bootstrap_info* peer_bi =   auth->peer_bi;
+		char* bootstrap_uri = peer_bi->uri;
+       		char* uri_token = strtok(bootstrap_uri,";");
+       		uri_token = strtok(NULL, ";");
+		char* public_key = uri_token + strlen("K:");
+		wpa_printf( MSG_DEBUG, "DPP: bootstrapping key =  %s\n", public_key ); 
+		wpa_printf(MSG_DEBUG,"DPP cert : %s",token->string);
       
-    }
+		char* trustedCertsPath = auth -> cacert;
+		if(trustedCertsPath == NULL) {
+			wpa_printf(MSG_ERROR,"DPP: cacerts path configured");
+			dpp_auth_fail(auth,"ERROR cacerts path missing");
+			goto fail;
+		}
+	
+		X509_STORE *store = X509_STORE_new();
+		X509_LOOKUP *lookup = X509_STORE_add_lookup(store, X509_LOOKUP_file());
+		if(X509_load_cert_file(lookup, trustedCertsPath, X509_FILETYPE_PEM) == 0 ) {
+			wpa_printf(MSG_ERROR, "DPP:Error loading cert chain");
+			dpp_auth_fail(auth, "ERROR loading cert chain");
+          		goto fail;
+		}
+		BIO* cbio = BIO_new_mem_buf((void*)token->string, -1);
+		X509* cert = PEM_read_bio_X509(cbio, NULL, 0, NULL);
+		if (cert == NULL) {
+			wpa_printf(MSG_ERROR, "DPP:Error reading certificate");
+			dpp_auth_fail(auth, "ERROR reading certificate");
+			goto fail;
+		}
+		/* Extract the public key from the cert */
+		EVP_PKEY *pkey = X509_get_pubkey(cert);
+		if (pkey == NULL) {
+			wpa_printf(MSG_ERROR, "DPP:  could not get the public key from certificate");
+			dpp_auth_fail(auth, "ERROR cannot get the public key");
+         		goto fail;
+		}
+
+		/* Get the bootstrap key */
+		struct wpabuf * bootstrap_key = dpp_bootstrap_key_der(pkey);
+		size_t base64len;
+		unsigned char* base64 = base64_encode(bootstrap_key->buf, bootstrap_key->size, &base64len);
+		unsigned char* base64_stripped = (unsigned char*) os_malloc((size_t)strlen((const char*)base64));
+		memset(base64_stripped,'\0',strlen((const char*)base64));
+		/* strip the new line characters*/
+		for (int i = 0, j=0; i < strlen((const char*)base64); i++) {
+			if (base64[i] != '\n') {
+				base64_stripped[j++] = base64[i];
+			} 
+		}
+		os_free(base64);
+ 		wpa_printf(MSG_DEBUG, "DPP:  base64 pubkey %s", base64_stripped);
+		/* compare the public key in the cert with the bootstrap key */
+		if (strcmp((const char*)base64_stripped,(const char*)public_key) != 0 ) {
+			wpa_printf(MSG_ERROR, "DPP:  public key does not match bootstrap key");
+			dpp_auth_fail(auth, "ERROR public key mismatch");
+			os_free(base64_stripped);
+			wpabuf_free(bootstrap_key);
+			goto fail;
+       		}
+		os_free(base64_stripped);
+		wpabuf_free(bootstrap_key);
+		BIO_free(cbio);
+
+		/* verify the certificate */
+		X509_STORE_CTX *ctx = X509_STORE_CTX_new();
+		X509_STORE_CTX_init(ctx, store, cert, NULL);
+		int status = status = X509_verify_cert(ctx);
+		X509_STORE_CTX_free(ctx);
+		X509_STORE_free(store);
+		X509_free(cert);
+		if(status == 1) {
+			wpa_printf(MSG_DEBUG, "DPP: Certificate verified ok\n");
+		} else {
+			wpa_printf(MSG_ERROR, "DPP:Error verifying cert");
+			dpp_auth_fail(auth, "Cert verification failed.");
+			goto fail;
+		}
+      
+   	}
 
 	token = json_get_member(root, "bandSupport");
 	if (token && token->type == JSON_ARRAY) {
