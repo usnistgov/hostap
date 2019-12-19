@@ -2543,12 +2543,13 @@ struct wpabuf * dpp_build_conf_req(struct dpp_authentication *auth,
 
 struct wpabuf * dpp_build_conf_req_helper(struct dpp_authentication *auth,
 					  const char *name, int netrole_ap,
-					  const char *mud_url, int *opclasses)
+					  const char *mud_url, const char* idevid, int *opclasses)
 {
 	size_t len, nlen;
 	const char *tech = "infra";
-	const char *dpp_name;
+	const char *dpp_name;	
 	char *nbuf;
+	char *pemfile = NULL;
 	struct wpabuf *buf, *json;
 
 #ifdef CONFIG_TESTING_OPTIONS
@@ -2571,27 +2572,34 @@ struct wpabuf * dpp_build_conf_req_helper(struct dpp_authentication *auth,
 	len = 100 + os_strlen(nbuf) + int_array_len(opclasses) * 4;
 	if (mud_url && mud_url[0])
 		len += 10 + os_strlen(mud_url);
-    /* mranga -- piggy back some additional stuff. TODO - put this in config */
-    FILE *f = fopen("/home/mranga/DevID50/DevIDCredentials/IDevID50.cert.pem", "rb");
-    /* mranga -- bugbug - malloc the length of the file. This is a quick hack */
-    char *pemfile = os_malloc(2048);
-    bzero(pemfile,2048);
-    if (f) {
-     while (fgets(pemfile + strlen(pemfile), 1024, f)!=NULL);
-     fclose(f);
-    }
 
-    /* mranga compute the length of the extra stuff we plan to add
-       bugbug -- should be pemfile length + 11 */
-    char* extra_stuff = os_malloc(2048);
-    sprintf(extra_stuff,"\"iDevId\":\"%s\"",pemfile);
-    len += os_strlen(extra_stuff);
-	wpa_printf(MSG_DEBUG, "DPP:  %s",extra_stuff);
-    os_free(extra_stuff);
+   	/* mranga -- open the idevid file */
+	if (idevid)  {
+		FILE *f = fopen(idevid, "rb");
+		if (f) {
+		    fseek(f, 0L, SEEK_END);
+		    int sz = ftell(f);
+		    rewind(f);
+			/* mranga -- bugbug - malloc the length of the file. This is a quick hack */    	
+			pemfile = os_malloc(2048);
+    		bzero(pemfile,2048);
+     		while (fgets(pemfile + strlen(pemfile), 1024, f)!=NULL);
+     		fclose(f);
+    		/* mranga compute the length of the extra stuff we plan to add
+        	bugbug -- should be pemfile length + 11 */
+    		char* extra_stuff = os_malloc(2048);
+    		sprintf(extra_stuff,"\"iDevId\":\"%s\"",pemfile);
+    		len += os_strlen(extra_stuff);
+            wpa_printf(MSG_DEBUG, "DPP:  %s",extra_stuff);
+    		os_free(extra_stuff);
+
+		}
+	}
+
 	json = wpabuf_alloc(len);
 	if (!json) {
 		os_free(nbuf);
-        os_free(pemfile);
+   		os_free(pemfile);
 		return NULL;
 	}
 
@@ -2602,9 +2610,11 @@ struct wpabuf * dpp_build_conf_req_helper(struct dpp_authentication *auth,
 		      nbuf, tech, netrole_ap ? "ap" : "sta");
 	if (mud_url && mud_url[0])
 		wpabuf_printf(json, ",\"mudurl\":\"%s\"", mud_url);
-	/* mranga piggy back additional stuff on the config request */
-    wpabuf_printf(json,",\"iDevId\":\"%s\"",pemfile);      
-    os_free(pemfile);
+	/* mranga -- add the idevid to the request */
+    if (pemfile && pemfile[0] ) {
+   		wpabuf_printf(json,",\"iDevId\":\"%s\"",pemfile);      
+   		os_free(pemfile);
+	}
 
 	if (opclasses) {
 		int i;
@@ -9587,7 +9597,7 @@ static void dpp_controller_start_gas_client(struct dpp_connection *conn)
 	struct wpabuf *buf;
 	int netrole_ap = 0; /* TODO: make this configurable */
 
-	buf = dpp_build_conf_req_helper(auth, "Test", netrole_ap, NULL, NULL);
+	buf = dpp_build_conf_req_helper(auth, "Test", netrole_ap, NULL, NULL, NULL);
 	if (!buf) {
 		wpa_printf(MSG_DEBUG,
 			   "DPP: No configuration request data available");

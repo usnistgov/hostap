@@ -1280,6 +1280,7 @@ static void wpas_dpp_start_gas_client(struct wpa_supplicant *wpa_s)
 	buf = dpp_build_conf_req_helper(auth, wpa_s->conf->dpp_name,
 					wpa_s->dpp_netrole_ap,
 					wpa_s->conf->dpp_mud_url,
+                                        wpa_s->conf->dpp_idevid,
 					supp_op_classes);
 	os_free(supp_op_classes);
 	if (!buf) {

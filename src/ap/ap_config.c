@@ -890,6 +890,7 @@ void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 #ifdef CONFIG_DPP
 	os_free(conf->dpp_name);
 	os_free(conf->dpp_mud_url);
+	os_free(conf->dpp_idevid);
 	os_free(conf->dpp_connector);
 	wpabuf_free(conf->dpp_netaccesskey);
 	wpabuf_free(conf->dpp_csign);

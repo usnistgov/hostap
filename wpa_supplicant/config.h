@@ -1514,6 +1514,11 @@ struct wpa_config {
 	 */
 	char *dpp_mud_url;
 
+        /**
+         * dpp_idevid - location of DPP idevid certificate (PEM format).
+         */
+	char *dpp_idevid;
+
 	/**
 	 * coloc_intf_reporting - Colocated interference reporting
 	 *
