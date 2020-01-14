@@ -36,14 +36,16 @@ The assumptions are :
 * The configurator has the CA certificate from the manufacturer.
 
 
-#Building
+# Building
 
 
 Copy the .config-hostapd and .config-wpasupplicant into hostapd/ and wpa\_supplicant respectively.
 
 Cd to the respective directories and build as usual.
 
-#Configuring wpa\_supplicant for DevID certifcates
+# Configuring wpa\_supplicant for DevID certifcates
+
+See wpa\_supplicant/README-DPP.md
 
 
 
