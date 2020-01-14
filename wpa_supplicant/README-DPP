@@ -55,6 +55,7 @@ ctrl_interface_group=0
 update_config=1
 pmf=2
 dpp_config_processing=2
+dpp_idevid=path/to/device/certificate.pem
 
 Sample hostapd config file before provisioning
 ----------------------------------------------
@@ -101,6 +102,8 @@ command.
 > dpp_bootstrap_gen type=qrcode mac=<mac-address-of-device> chan=<operating-class/operating-channel> key=<key of the device>
 (returns bootstrapping info id)
 
+Note, in this case the key is the private key of the Device Certificate that the enrollee will later present to the Configurator.
+
 Get QR Code of device using the bootstrap info id.
 > dpp_bootstrap_get_uri <bootstrap-id>
 
@@ -118,9 +121,12 @@ On successfully adding QR Code, a bootstrapping info id is returned.
 
 Send provisioning request to enrollee. (conf is ap-dpp if enrollee is an
 AP. conf is sta-dpp if enrollee is a client)
-> dpp_auth_init peer=<qr-code-id> conf=<ap-dpp|sta-dpp> ssid=<SSID hexdump> configurator=<configurator-id>
+> dpp_auth_init peer=<qr-code-id> conf=<ap-dpp|sta-dpp> ssid=<SSID hexdump> configurator=<configurator-id> cacert=<path-to-ca-cert>
 or for legacy (PSK/SAE) provisioning for a station Enrollee:
-> dpp_auth_init peer=<qr-code-id> conf=sta-psk ssid=<SSID hexdump> pass=<passphrase hexdump>
+> dpp_auth_init peer=<qr-code-id> conf=sta-psk ssid=<SSID hexdump> pass=<passphrase hexdump> cacert=<path-to-ca-cert>
+
+Where path-to-ca-cert is the path to the CA certificate (or certificate
+chain) for the DevID that will be presented by the enrolle.
 
 The DPP values will be printed in the console. Save this values into the
 config file. If the enrollee is an AP, we need to manually write these
