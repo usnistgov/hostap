@@ -100,16 +100,19 @@ char* wpas_dpp_config_status(struct wpa_supplicant *wpa_s, const char* cmd) {
         
 	char* pos = os_strstr(cmd, "id=");
         if (! pos ) {
+	    wpa_printf(MSG_DEBUG,
+		   "DPP: id not found");
 	    return NULL;
 	}
         int id =atoi(pos + 3);
 	wpa_printf(MSG_DEBUG, "DPP: wpas_dpp_config_status %d ",id);
         struct dpp_configurator* dpp_configurator = dpp_configurator_get_id(wpa_s -> dpp,id);
-        if(dpp_configurator->mud_url == NULL) {
+        if (dpp_configurator == NULL) {
+	   wpa_printf(MSG_DEBUG, "DPP: configurator not found.");
 	   return NULL;
         }
         char* retval = os_malloc(4096);
-        if (dpp_configurator->idevid != NULL) {
+        if (dpp_configurator->idevid != NULL && dpp_configurator->mud_url != NULL) {
               char* certbuf = os_zalloc(4096);
               /* json strings can't have \n */
               for (int i = 0, j=0; i < strlen((const char*)dpp_configurator->idevid); i++) {
@@ -122,9 +125,13 @@ char* wpas_dpp_config_status(struct wpa_supplicant *wpa_s, const char* cmd) {
 			}
 	     }
              sprintf(retval, "{\"config_status\":{\"mud_url\":\"%s\", \"idevid\":\"%s\"}}", dpp_configurator->mud_url, certbuf);
-	} else {
+	} else if (dpp_configurator->mud_url != NULL) {
             sprintf(retval, "{\"config_status\":{\"mud_url\": \"%s\"}}", dpp_configurator->mud_url);
-	}
+	} else {
+	  wpa_printf(MSG_DEBUG, "config_status nothing to report");
+          sprintf(retval,"{\"config_status\":{}}" );
+        }
+	wpa_printf(MSG_DEBUG, "config_status returning %s", retval);
         return  retval;
 }
 

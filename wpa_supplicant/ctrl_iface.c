@@ -10687,7 +10687,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = os_snprintf(reply, reply_size, "%s", res);
 			if (os_snprintf_error(reply_size, reply_len))
 				reply_len = -1;
+                         os_free(res);
 		}
+             
              
 	} else if (os_strncmp(buf, "DPP_BOOTSTRAP_GEN ", 18) == 0) {
 		int res;
