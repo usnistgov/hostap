@@ -2926,6 +2926,12 @@ static int wpa_cli_cmd_dpp_qr_code(struct wpa_ctrl *ctrl, int argc,
 	return wpa_cli_cmd(ctrl, "DPP_QR_CODE", 1, argc, argv);
 }
 
+/* added mranga */
+static int wpa_cli_cmd_dpp_config_status(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	return wpa_cli_cmd(ctrl,"DPP_CONFIG_STATUS",1,argc, argv);
+}
+
 
 static int wpa_cli_cmd_dpp_bootstrap_gen(struct wpa_ctrl *ctrl, int argc,
 					 char *argv[])
@@ -3686,7 +3692,10 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "dpp_controller_start", wpa_cli_cmd_dpp_controller_start, NULL, 
            cli_cmd_flag_none,
            "tcp_port=<port> = start the controller "},
-        
+         /* added mranga */
+        { "dpp_config_status", wpa_cli_cmd_dpp_config_status, NULL, 
+	    cli_cmd_flag_none,
+            "id=<configurator-id> = check the config status"},
 #endif /* CONFIG_DPP */
 	{ NULL, NULL, NULL, cli_cmd_flag_none, NULL }
 };

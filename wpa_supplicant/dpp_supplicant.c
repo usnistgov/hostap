@@ -47,6 +47,8 @@ wpas_dpp_tx_pkex_status(struct wpa_supplicant *wpa_s,
 			enum offchannel_send_action_result result);
 
 static const u8 broadcast[ETH_ALEN] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+struct dpp_configurator *
+dpp_configurator_get_id(struct dpp_global *dpp, unsigned int id);
 
 /* Use a hardcoded Transaction ID 1 in Peer Discovery frames since there is only
  * a single transaction in progress at any point in time. */
@@ -85,6 +87,45 @@ int wpas_dpp_qr_code(struct wpa_supplicant *wpa_s, const char *cmd)
 	}
 
 	return bi->id;
+}
+
+/**
+*
+* poll for the config status. 
+*
+* added -- mranga
+*/
+
+char* wpas_dpp_config_status(struct wpa_supplicant *wpa_s, const char* cmd) {
+        
+	char* pos = os_strstr(cmd, "id=");
+        if (! pos ) {
+	    return NULL;
+	}
+        int id =atoi(pos + 3);
+	wpa_printf(MSG_DEBUG, "DPP: wpas_dpp_config_status %d ",id);
+        struct dpp_configurator* dpp_configurator = dpp_configurator_get_id(wpa_s -> dpp,id);
+        if(dpp_configurator->mud_url == NULL) {
+	   return NULL;
+        }
+        char* retval = os_malloc(4096);
+        if (dpp_configurator->idevid != NULL) {
+              char* certbuf = os_zalloc(4096);
+              /* json strings can't have \n */
+              for (int i = 0, j=0; i < strlen((const char*)dpp_configurator->idevid); i++) {
+			if (dpp_configurator->idevid[i] != '\n') {
+				certbuf[j++] = dpp_configurator->idevid[i];
+			}  else {
+                                // replace \n with two * chars 
+                                certbuf[j++] = '\\';
+                                certbuf[j++] = 'n';
+			}
+	     }
+             sprintf(retval, "{\"config_status\":{\"mud_url\":\"%s\", \"idevid\":\"%s\"}}", dpp_configurator->mud_url, certbuf);
+	} else {
+            sprintf(retval, "{\"config_status\":{\"mud_url\": \"%s\"}}", dpp_configurator->mud_url);
+	}
+        return  retval;
 }
 
 

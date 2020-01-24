@@ -269,6 +269,7 @@ struct dpp_authentication {
 	char *cacert;
 };
 
+
 struct dpp_configurator {
 	struct dl_list list;
 	unsigned int id;
@@ -276,6 +277,9 @@ struct dpp_configurator {
 	EVP_PKEY *csign;
 	char *kid;
 	const struct dpp_curve_params *curve;
+        /* added mranga -- should probably put this elsewhere but it is conveneint to put here*/
+        char *mud_url;
+        char *idevid;
 };
 
 struct dpp_introduction {

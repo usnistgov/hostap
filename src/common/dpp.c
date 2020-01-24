@@ -4572,16 +4572,21 @@ fail:
 }
 
 
-static struct dpp_configurator *
+/* removed static -- mranga */
+struct dpp_configurator *
 dpp_configurator_get_id(struct dpp_global *dpp, unsigned int id)
 {
 	struct dpp_configurator *conf;
 
-	if (!dpp)
+	if (!dpp) {
+		wpa_printf(MSG_DEBUG, "NULL dpp_global");
 		return NULL;
+	}
 
 	dl_list_for_each(conf, &dpp->configurator,
 			 struct dpp_configurator, list) {
+		wpa_printf(MSG_DEBUG,
+				   "DPP: configurator id = %d / %d ", conf->id, id);
 		if (conf->id == id)
 			return conf;
 	}
@@ -5327,6 +5332,9 @@ dpp_conf_req_rx(struct dpp_authentication *auth, const u8 *attr_start,
 
 	token = json_get_member(root, "mudurl");
 	if (token && token->type == JSON_STRING) {
+                /* mranga -- save the MUD URL so the configurator app can access it */
+                auth->conf->mud_url = os_malloc((size_t)os_strlen(token->string) + 1);
+                os_memcpy(auth->conf->mud_url, token->string, os_strlen(token->string) + 1);
 		wpa_printf(MSG_DEBUG, "DPP: mudurl = '%s'", token->string);
 		wpa_hexdump(MSG_DEBUG,"DPP: auth->peer_bi->pubkey_hash ", auth->peer_bi->pubkey_hash,SHA256_MAC_LEN);
 	}
@@ -5412,7 +5420,8 @@ dpp_conf_req_rx(struct dpp_authentication *auth, const u8 *attr_start,
 			dpp_auth_fail(auth, "Cert verification failed.");
 			goto fail;
 		}
-      
+                auth->conf->idevid = os_malloc((size_t)os_strlen(token->string) + 1);
+                os_memcpy(auth->conf->idevid, token->string, os_strlen(token->string) + 1);
    	}
 
 	token = json_get_member(root, "bandSupport");

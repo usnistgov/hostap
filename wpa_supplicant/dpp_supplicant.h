@@ -33,4 +33,7 @@ void wpas_dpp_connected(struct wpa_supplicant *wpa_s);
 void wpas_dpp_send_conn_status_result(struct wpa_supplicant *wpa_s,
 				      enum dpp_status_error result);
 
+/* added mranga */
+char* wpas_dpp_config_status(struct wpa_supplicant *wpa_s, const char *cmd);
+
 #endif /* DPP_SUPPLICANT_H */

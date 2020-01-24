@@ -9949,7 +9949,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 				      (const u8 *) buf, os_strlen(buf));
 	} else {
 		int level = wpas_ctrl_cmd_debug_level(buf);
-		wpa_dbg(wpa_s, level, "Control interface command '%s'", buf);
+		wpa_dbg(wpa_s, level, "wpa_supplicant_ctrl_iface_process: Control interface command '%s'", buf);
 	}
 
 	reply = os_malloc(reply_size);
@@ -10678,6 +10678,17 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			if (os_snprintf_error(reply_size, reply_len))
 				reply_len = -1;
 		}
+	} else if (os_strncmp(buf,"DPP_CONFIG_STATUS ", 18) == 0 ) {
+               /* mranga -- Poll for config status so the configurator app can report status */
+		char* res = wpas_dpp_config_status(wpa_s, buf + 18);
+                if (! res) {
+		     reply_len = -1;
+		} else {
+			reply_len = os_snprintf(reply, reply_size, "%s", res);
+			if (os_snprintf_error(reply_size, reply_len))
+				reply_len = -1;
+		}
+             
 	} else if (os_strncmp(buf, "DPP_BOOTSTRAP_GEN ", 18) == 0) {
 		int res;
 
