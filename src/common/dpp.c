@@ -2579,10 +2579,10 @@ struct wpabuf * dpp_build_conf_req_helper(struct dpp_authentication *auth,
 	if (idevid)  {
 		FILE *f = fopen(idevid, "r");
 		if (f) {
-		    	fseek(f, 0L, SEEK_END);
-		    	int sz = ftell(f);
-		    	rewind(f);
-			int size =  sz+1;
+            fseek(f, 0L, SEEK_END);
+	        int sz = ftell(f);
+		   	rewind(f);
+            int size =  sz+1;
 			pemfile = os_malloc(size);
  			bzero(pemfile,size);
 			while (fgets(pemfile + strlen(pemfile), 1024, f)!=NULL);
@@ -5390,7 +5390,6 @@ static int dpp_configuration_parse_helper(struct dpp_authentication *auth,
 			size_t base64len;
 			unsigned char* base64 = base64_encode(bootstrap_key->buf, bootstrap_key->size, &base64len);
 			unsigned char* base64_stripped = (unsigned char*) os_zalloc((size_t)strlen((const char*)base64));
-			memset(base64_stripped,'\0',strlen((const char*)base64));
 			/* strip the new line characters*/
 			for (int i = 0, j=0; i < strlen((const char*)base64); i++) {
 				if (base64[i] != '\n') {
@@ -5427,8 +5426,9 @@ static int dpp_configuration_parse_helper(struct dpp_authentication *auth,
 				dpp_auth_fail(auth, "Cert verification failed.");
 				goto fail;
 			}
-                	auth->conf->idevid = os_zalloc((size_t)strlen(token->string) + 1);
-                	os_memcpy(auth->conf->idevid, token->string, strlen(token->string));
+            /* save the devid so the configurator app can access it */
+            auth->conf->idevid = os_zalloc((size_t)strlen(token->string) + 1);
+            os_memcpy(auth->conf->idevid, token->string, strlen(token->string));
    	}
 
 	token = json_get_member(root, "bandSupport");
