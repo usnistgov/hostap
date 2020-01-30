@@ -5429,9 +5429,9 @@ static int dpp_configuration_parse_helper(struct dpp_authentication *auth,
 				dpp_auth_fail(auth, "Cert verification failed.");
 				goto fail;
 			}
-            /* save the devid so the configurator app can access it */
-            auth->conf->idevid = os_zalloc((size_t)strlen(token->string) + 1);
-            os_memcpy(auth->conf->idevid, token->string, strlen(token->string));
+            		/* save the devid so the configurator app can access it */
+            		auth->conf->idevid = os_zalloc((size_t)strlen(token->string) + 1);
+            		os_memcpy(auth->conf->idevid, token->string, strlen(token->string));
    	}
 
 	token = json_get_member(root, "bandSupport");
