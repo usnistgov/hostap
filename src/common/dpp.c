@@ -5374,6 +5374,7 @@ static int dpp_configuration_parse_helper(struct dpp_authentication *auth,
 			if (cert == NULL) {
 				wpa_printf(MSG_ERROR, "DPP:Error reading certificate");
 				dpp_auth_fail(auth, "ERROR reading certificate");
+		        	BIO_free(cbio);
 				goto fail;
 			}
 			/* Extract the public key from the cert */
@@ -5382,6 +5383,7 @@ static int dpp_configuration_parse_helper(struct dpp_authentication *auth,
 				wpa_printf(MSG_ERROR, "DPP:  could not get the public key from certificate");
 				dpp_auth_fail(auth, "ERROR cannot get the public key");
 				os_free(bootstrap_uri);
+		        	BIO_free(cbio);
 				goto fail;
 			}
 
@@ -5405,12 +5407,12 @@ static int dpp_configuration_parse_helper(struct dpp_authentication *auth,
 				os_free(base64_stripped);
 				os_free(bootstrap_uri);
 				wpabuf_free(bootstrap_key);
+		        	BIO_free(cbio);
 			        goto fail;
 			}
 			os_free(base64_stripped);
 			wpabuf_free(bootstrap_key);
                 	os_free(bootstrap_uri);
-			BIO_free(cbio);
 
 			/* verify the certificate */
 			X509_STORE_CTX *ctx = X509_STORE_CTX_new();
@@ -5419,6 +5421,7 @@ static int dpp_configuration_parse_helper(struct dpp_authentication *auth,
 			X509_STORE_CTX_free(ctx);
 			X509_STORE_free(store);
 			X509_free(cert);
+		        BIO_free(cbio);
 			if(status == 1) {
 				wpa_printf(MSG_DEBUG, "DPP: Certificate verified ok\n");
 			} else {
