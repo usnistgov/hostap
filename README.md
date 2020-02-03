@@ -28,6 +28,12 @@ and also verifies the certificate chain based on the CA certificate. If
 the presented iDevID certificate verifies, the configurator sends network credentials
 information to the supplicant, thereby onboarding the supplicant.
 
+The advantage of sending the full certificate is that additional
+information such as the MUD URL can be imbedded in the certificate
+rather than presented as a parameter during onboarding. Thus even if
+the software of the device is compromised, the manufacturer assigned
+MUD URL is preserved in the certificate.
+
 The assumptions are :
 
 * The device certificate is assumed be shipped with the device.
