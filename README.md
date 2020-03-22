@@ -2,7 +2,9 @@
 
 DPP hacks for wpa\_supplicant and hostap with device identity.
 
-This fork of hostap adds device identity support during the onboarding process.
+This fork of hostap adds device identity support during the onboarding process. 
+
+This project is part of the [Trustworthy Networks of Things](https://www.nist.gov/programs-projects/trustworthy-networks-things) project at NIST.
 
 The following is a summary of the interactions:
 
